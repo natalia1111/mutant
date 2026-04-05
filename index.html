@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Эволюция мутантной популяции</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .question { margin-top: 20px; }
+    input { margin-top: 5px; }
+    .correct { color: green; }
+    .wrong { color: red; }
+  </style>
+</head>
+<body>
+  <h2>Интерактивная модель эволюции мутантной популяции</h2>
+
+  <h3>Введите параметры:</h3>
+  Начальная популяция: <input id="N0" type="number" value="5000"><br>
+  Частота полезных мутаций (%): <input id="mutationRate" type="number" step="0.01" value="0.1"><br>
+  Селективное преимущество (%): <input id="s" type="number" step="0.01" value="30"><br>
+  Летальность гигантов (%): <input id="giantMortality" type="number" step="0.01" value="50"><br>
+  Число поколений: <input id="generations" type="number" value="20"><br><br>
+
+  <button onclick="simulate()">Запустить симуляцию</button>
+
+  <h3>Результаты:</h3>
+  <div id="results"></div>
+
+  <h3>Графики:</h3>
+  <canvas id="mutantsChart" width="400" height="200"></canvas>
+  <canvas id="giantsChart" width="400" height="200"></canvas>
+
+  <h3>Вопросы для анализа:</h3>
+  <div class="question">
+    1. Численность мутантов через 10 поколений:<br>
+    <input id="q1" type="text"><button onclick="checkAnswer(1)">Проверить</button>
+    <div id="a1"></div>
+  </div>
+  <div class="question">
+    2. Численность мутантов через 20 поколений:<br>
+    <input id="q2" type="text"><button onclick="checkAnswer(2)">Проверить</button>
+    <div id="a2"></div>
+  </div>
+  <div class="question">
+    3. Вероятность появления особи с тремя мутациями:<br>
+    <input id="q3" type="text"><button onclick="checkAnswer(3)">Проверить</button>
+    <div id="a3"></div>
+  </div>
+  <div class="question">
+    4. Доля гигантов в популяции на последнем поколении (%):<br>
+    <input id="q4" type="text"><button onclick="checkAnswer(4)">Проверить</button>
+    <div id="a4"></div>
+  </div>
+
+<script>
+let mutants = [];
+let giants = [];
+let correctAnswers = {};
+
+function simulate() {
+  const N0 = parseFloat(document.getElementById("N0").value);
+  const mutationRate = parseFloat(document.getElementById("mutationRate").value)/100;
+  const s = parseFloat(document.getElementById("s").value)/100;
+  const generations = parseInt(document.getElementById("generations").value);
+  const giantMortality = parseFloat(document.getElementById("giantMortality").value)/100;
+
+  mutants = [];
+  giants = [];
+
+  for (let t = 0; t <= generations; t++) {
+    let Nt = N0 * Math.pow(1 + s, t) * mutationRate * t;
+    mutants.push(Nt);
+
+    let giantsCount = Nt * 0.2;
+    giantsCount = giantsCount * (1 - giantMortality);
+    giants.push(giantsCount);
+  }
+
+  const probThree = Math.pow(mutationRate, 3);
+
+  correctAnswers = {
+    1: Math.round(mutants[10]),
+    2: Math.round(mutants[generations]),
+    3: probThree.toExponential(3),
+    4: (giants[generations]/mutants[generations]*100).toFixed(2)
+  };
+
+  document.getElementById("results").innerHTML =
+    "Численность мутантов через 10 поколений: " + Math.round(mutants[10]) + "<br>" +
+    "Численность мутантов через " + generations + " поколений: " + Math.round(mutants[generations]) + "<br>" +
+    "Вероятность появления особи с тремя мутациями: " + probThree.toExponential(3) + "<br>" +
+    "Доля гигантов в популяции на последнем поколении: " + (giants[generations]/mutants[generations]*100).toFixed(2) + "%";
+
+  new Chart(document.getElementById("mutantsChart"), {
+    type: 'line',
+    data: {
+      labels: Array.from({length: generations+1}, (_,i)=>i),
+      datasets: [
+        {label: 'Мутанты', data: mutants, borderColor: 'blue', fill:false},
+        {label: 'Гиганты', data: giants, borderColor: 'red', fill:false}
+      ]
+    }
+  });
+
+  let giantsShare = giants.map((g,i)=> mutants[i]>0 ? g/mutants[i]*100 : 0);
+  new Chart(document.getElementById("giantsChart"), {
+    type: 'line',
+    data: {
+      labels: Array.from({length: generations+1}, (_,i)=>i),
+      datasets: [
+        {label: 'Доля гигантов (%)', data: giantsShare, borderColor: 'green', fill:false}
+      ]
+    }
+  });
+}
+
+function checkAnswer(q) {
+  let userInput = document.getElementById("q"+q).value.trim();
+  let correct = correctAnswers[q];
+  let resultDiv = document.getElementById("a"+q);
+
+  if (q===3) {
+    if (userInput === correct) {
+      resultDiv.innerHTML = "<span class='correct'>Верно!</span>";
+    } else {
+      resultDiv.innerHTML = "<span class='wrong'>Неверно. Правильный ответ: "+correct+"</span>";
+    }
+  } else {
+    if (parseFloat(userInput) == correct) {
+      resultDiv.innerHTML = "<span class='correct'>Верно!</span>";
+    } else {
+      resultDiv.innerHTML = "<span class='wrong'>Неверно. Правильный ответ: "+correct+"</span>";
+    }
+  }
+}
+</script>
+</body>
+</html>
